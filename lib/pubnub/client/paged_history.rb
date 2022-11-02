@@ -16,6 +16,7 @@ module Pubnub
         page_size = options.fetch(:page_size, 100)          # How many messages per-request should be fetched.
         reverse = options.fetch(:reverse, false)            # Order in which messages should be retrieved if :end not set.
         include_token = options.fetch(:include_token, true) # Whether timetoken should be included with message or not.
+        include_uuid = options.fetch(:include_uuid, false)
         maximum = options.fetch(:max, 500)                  # Maximum number of messages which should be fetched.
         callback = options.fetch(:callback, block)
 
@@ -23,7 +24,7 @@ module Pubnub
         maximum = nil unless end_tt.nil? # Disable maximum messages count if closed time interval specified.
 
         if options[:http_sync]
-          sync_all_history_messages(channel, include_token, page_size, reverse, maximum, callback, start: start_tt, end: end_tt)
+          sync_all_history_messages(channel, include_token, include_uuid, page_size, reverse, maximum, callback, start: start_tt, end: end_tt)
         else
           async_all_history_messages(options)
         end
@@ -34,13 +35,14 @@ module Pubnub
         page = options.fetch(:page, 1)                      # How many mages should be fetched with specified limit.
         limit = options.fetch(:limit, 100)                  # How many messages per page should be fetched.
         include_token = options.fetch(:include_token, false) # Whether timetoken should be included with message or not.
+        include_uuid = options.fetch(:include_uuid, false)
         callback = options.fetch(:callback, block)
         # Time frame between which messages should be fetched.
         start_tt = options.fetch(:start, nil)
         end_tt = options.fetch(:end, nil)
 
         if options[:http_sync]
-          sync_paged_history(channel, page, limit, include_token, callback, start: start_tt, end: end_tt)
+          sync_paged_history(channel, page, limit, include_token, include_uuid, callback, start: start_tt, end: end_tt)
         else
           async_paged_history(options)
         end
@@ -48,7 +50,7 @@ module Pubnub
 
       private
 
-      def sync_all_history_messages(channel, include_token, page_size, reverse, maximum, callback, timetokens)
+      def sync_all_history_messages(channel, include_token, include_uuid, page_size, reverse, maximum, callback, timetokens)
         next_timetoken = timetokens[:start]
         messages_timetokens = timetokens.dup
         final_envelope = nil
@@ -59,6 +61,7 @@ module Pubnub
           envelope = history(
             channel: channel,
             include_token: include_token,
+            include_uuid: include_uuid,
             count: page_size,
             reverse: reverse,
             start: next_timetoken,
@@ -103,12 +106,13 @@ module Pubnub
       end
 
       # Retrieve results page-by-page (callback called for each page).
-      def sync_paged_history(channel, page, limit, include_token, callback, timetokens)
+      def sync_paged_history(channel, page, limit, include_token, include_uuid, callback, timetokens)
         envelopes = []
         page.times do |_i|
           envelope = history(
             channel: channel,
             include_token: include_token,
+            include_uuid: include_uuid,
             http_sync: true,
             count: limit,
             start: timetokens[:start],

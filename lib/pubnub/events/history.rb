@@ -41,7 +41,7 @@ module Pubnub
 
     def path
       '/' + [
-        'v2',
+        'v3',
         'history',
         'sub-key',
         @subscribe_key,
@@ -54,10 +54,11 @@ module Pubnub
       params = super
       params[:start] = @start if @start
       params[:end] = @end if @end
-      params[:count] = @count if @count
+      params[:max] = @count if @count
       params[:reverse] = 'true' if @reverse
       params[:include_token] = 'true' if @include_token
       params[:include_meta] = 'true' if @include_meta
+      params[:include_uuid] = 'true' if @include_uuid
       params
     end
 
@@ -72,7 +73,7 @@ module Pubnub
     end
 
     def valid_envelope(parsed_response, req_res_objects)
-      messages = parsed_response[0]
+      messages = parsed_response['channels'].values[0]
 
       if (@cipher_key || @app.env[:cipher_key] || @cipher_key_selector || @app.env[:cipher_key_selector]) && messages
         cipher_key = compute_cipher_key(parsed_response)
@@ -81,8 +82,11 @@ module Pubnub
         messages = messages.map { |message| decrypt_history(message, crypto) }
       end
 
-      start = parsed_response[1]
-      finish = parsed_response[2]
+      if messages
+        timetokens = messages.map { |message| message['timetoken'].to_i }
+        start = timetokens.min
+        finish = timetokens.max
+      end
 
       Pubnub::Envelope.new(
         event: @event,
@@ -113,7 +117,7 @@ module Pubnub
           server_response: req_res_objects[:response],
 
           data: {
-            messages: messages,
+            messages: messages || [],
             end: finish,
             start: start
           }

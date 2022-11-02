@@ -176,6 +176,7 @@ module Pubnub
                      replicate with_presence cipher_key_selector include_meta join update get
                      add remove push_token push_gateway environment topic authorized_uuid
                      authorized_user_id token
+                     include_uuid
                    ]
 
       options = options.each_with_object({}) { |option, obj| obj[option.first.to_sym] = option.last }
